@@ -5,6 +5,7 @@
 
 # Imports
 ## Basics
+import random
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -121,6 +122,39 @@ def expanded_df_bootstrap(df, ndraws=1000, draw_from=None, level='cm'):
     exploded_df.drop(columns=['ln_ged_sb_dep'], inplace=True)
     exploded_df.rename(columns={'draws':'outcome'}, inplace=True)
     exploded_df.set_index('draw', append=True, inplace=True)
+    return exploded_df
+
+def expanded_df_poisson(df, ndraws=1000,level='cm'):
+    function_with_draws = partial(sample_poisson_row, ndraws=ndraws)
+    df['draws'] = df.apply(function_with_draws, axis=1)
+    exploded_df = df.explode('draws')
+    if level=='cm':
+        exploded_df['draw'] = exploded_df.groupby(['month_id','country_id']).cumcount()
+    if level=='pgm':
+        exploded_df['draw'] = exploded_df.groupby(['month_id','priogrid_id']).cumcount()
+    exploded_df.drop(columns=['prediction'],inplace=True)
+    exploded_df.rename(columns={'draws':'outcome'},inplace=True)
+    exploded_df.set_index('draw', append=True,inplace=True)
+    return(exploded_df)
+
+def expanded_df(df, function, ndraws=1000,level='cm'):
+    function_with_draws = function(ndraws=ndraws)
+    df['draws'] = df.apply(function_with_draws, axis=1)
+    exploded_df = df.explode('draws')
+    if level=='cm':
+        exploded_df['draw'] = exploded_df.groupby(['month_id','country_id']).cumcount()
+    if level=='pgm':
+        exploded_df['draw'] = exploded_df.groupby(['month_id','priogrid_id']).cumcount()
+    try:
+        exploded_df.drop(columns=['prediction'],inplace=True)
+    except:
+        pass
+    try:
+        exploded_df.drop(columns=['ln_ged_sb_dep'],inplace=True)
+    except:
+        pass
+    exploded_df.rename(columns={'draws':'outcome'},inplace=True)
+    exploded_df.set_index('draw', append=True,inplace=True)
     return exploded_df
 
 # cm level
