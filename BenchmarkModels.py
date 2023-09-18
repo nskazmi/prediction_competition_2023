@@ -316,3 +316,41 @@ if False:
 
 
 
+def bootstrap_preddraws_inner(pred, resids, bins,bin_borders,n_bins,n_draws,lb = 0, ub = float('inf')):
+    obs_bin = pd.cut([pred], bins = bin_borders, labels = range(1,n_bins+1))
+    resids = np.array(resids)
+    resids = resids[bins == obs_bin[0]]
+    sampled_resids = random.choices(resids,k=n_draws)
+    draws = pred + np.array(sampled_resids)
+    draws[draws<lb] = lb
+    draws[draws>ub] = ub
+    out = pd.DataFrame({'draw_id': range(1,n_draws + 1),
+                       'draw': draws})
+    return(out)
+
+def boot_preddraws(actuals_pred, preds = None, n_bins = 5, n_draws = 1, lb = 0, ub = float('inf')):
+    resids = actuals_pred.iloc[:,1] - actuals_pred.iloc[:,0]
+    bins = pd.qcut(x=actuals_pred.iloc[:,1],q=n_bins,labels=range(1,n_bins+1),retbins=True)
+    bin_borders = bins[1]
+    bins = bins[0]
+    bin_borders[0] = lb
+    bin_borders[-1] = ub
+    if preds is not None:
+        preds = preds.reset_index()
+        output = pd.DataFrame()
+        for i in range(0,len(preds)):
+            tmp = bootstrap_preddraws_inner(preds.iloc[i,2],resids,bins,bin_borders,n_bins,n_draws,lb,ub)
+            tmp['month_id'] = np.repeat(preds.iloc[i,0],n_draws)
+            tmp['country_id'] = np.repeat(preds.iloc[i,1],n_draws)
+            output = pd.concat([output,tmp],axis = 0)
+    else:
+        actuals_pred = actuals_pred.reset_index()
+        output = pd.DataFrame()
+        for i in range(0,len(actuals_pred)):
+            tmp = bootstrap_preddraws_inner(actuals_pred.iloc[i,3],resids,bins,bin_borders,n_bins,n_draws,lb,ub)
+            tmp['month_id'] = np.repeat(actuals_pred.iloc[i,0],n_draws)
+            tmp['country_id'] = np.repeat(actuals_pred.iloc[i,1],n_draws)
+            output = pd.concat([output,tmp],axis = 0)
+        
+    output = output.set_index(['month_id','country_id','draw_id'])
+    return(output)
