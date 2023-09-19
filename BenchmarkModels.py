@@ -313,6 +313,11 @@ def bootstrap_preddraws_inner(pred, resids, bins,bin_borders,n_bins,n_draws,lb =
                        'draw': draws})
     return(out)
 
+
+# A function for bootstrapped binned draws taking a df with actuals-predictions , 
+# an optional df with only predictions (if you want to use the actual-predictions from one set and make draws for another), 
+# n_bins och n_draws. It  returns a df with index  month_id, country_id, and draw_id.
+
 def boot_preddraws(actuals_pred, preds = None, n_bins = 5, n_draws = 1, lb = 0, ub = float('inf')):
     resids = actuals_pred.iloc[:,1] - actuals_pred.iloc[:,0]
     bins = pd.qcut(x=actuals_pred.iloc[:,1],q=n_bins,labels=range(1,n_bins+1),retbins=True)
