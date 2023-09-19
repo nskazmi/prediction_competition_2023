@@ -56,8 +56,8 @@ def extract_year(year, df):
 
 def describe_expanded(df, df_expanded, month, country):
     # Verify that the distribution is right
-    this_month = 457
-    this_country = 57
+    this_month = 457 # the month is not a variable
+    this_country = 57 # the country is not a variable
     print("Mean and std of original predictions, all rows:")
     print(df.describe())
     print("Mean and std of expanded predictions, all rows:")
