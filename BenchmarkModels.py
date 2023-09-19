@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# # Benchmark model generation
+# # Benchmark model generation: A script with all the functions used in the Prediction Competition 2023
 
 # Imports
 ## Basics
@@ -344,3 +344,6 @@ def boot_preddraws(actuals_pred, preds = None, n_bins = 5, n_draws = 1, lb = 0, 
         
     output = output.set_index(['month_id','country_id','draw_id'])
     return(output)
+
+# End of file
+
