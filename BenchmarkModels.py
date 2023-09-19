@@ -300,55 +300,6 @@ def save_actuals(level, df, filepath, year_list):
     filename = filepath + level + '_actuals_allyears.parquet'
     actuals.to_parquet(filename)
 
-    
-if False:
-
-
-
-    # ## Saving the pgm models
-
-    # In[ ]:
-
-
-    model_names = ['ensemble','constituent']
-    i = 0
-    for bm_model in [sc_predictions_ensemble_pgm]:
-        for record in bm_model:
-            year_record = record # First part of record list is list of yearly predictions, second is string name for benchmark model
-            print(year_record['year'])
-            filename = filepath + 'bm_pgm_' + model_names[i] + '_expanded_' + str(year_record['year']) + '.parquet'
-            print(filename)
-            year_record['expanded_df'].to_parquet(filename)
-        i = i + 1
-
-    # Dataframe with actuals
-    df_actuals = pd.DataFrame(ensemble_pgm_df)
-    pgm_actuals = df_actuals
-    pgm_actuals['ged_sb'] = np.expm1(pgm_actuals['ln_ged_sb_dep'])
-    pgm_actuals.drop(columns=['ln_ged_sb_dep'], inplace=True)
-    print(pgm_actuals.head())
-    print(pgm_actuals.tail())
-    print(pgm_actuals.describe())
-
-
-    # Annual dataframes with actuals, saved to disk
-    for year in year_list:
-        first_month = (year - 1980)*12 + 1
-        last_month = (year - 1980 + 1)*12
-        df_annual = pgm_actuals.loc[first_month:last_month]
-        filename = filepath + 'cm_actuals_' + str(year) + '.parquet'
-        print(year, first_month, last_month, filename)
-        print(df_annual.head())
-        df_annual.to_parquet(filename)
-    # For all four years
-    filename = filepath + 'pgm_actuals_allyears.parquet'
-    pgm_actuals.to_parquet(filename)
-
-
-    # In[ ]:
-
-
-
 
 def bootstrap_preddraws_inner(pred, resids, bins,bin_borders,n_bins,n_draws,lb = 0, ub = float('inf')):
     obs_bin = pd.cut([pred], bins = bin_borders, labels = range(1,n_bins+1))
