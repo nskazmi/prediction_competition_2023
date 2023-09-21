@@ -104,7 +104,7 @@ def expanded_df_distribution(df, ndraws=1000, level='cm', distribution = 'poisso
     if level == 'cm':
         exploded_df['draw'] = exploded_df.groupby(['month_id', 'country_id']).cumcount()
     if level == 'pgm':
-        exploded_df['draw'] = exploded_df.groupby(['month_id', 'priogrid_id']).cumcount()
+        exploded_df['draw'] = exploded_df.groupby(['month_id', 'priogrid_gid']).cumcount()
     exploded_df.drop(columns=['prediction'], inplace=True)
     exploded_df.rename(columns={'draws':'outcome'}, inplace=True)
     exploded_df.set_index('draw', append=True, inplace=True)
@@ -118,7 +118,7 @@ def expanded_df_bootstrap(df, ndraws=1000, draw_from=None, level='cm'):
     if level == 'cm':
         exploded_df['draw'] = exploded_df.groupby(['month_id', 'country_id']).cumcount()
     if level == 'pgm':
-        exploded_df['draw'] = exploded_df.groupby(['month_id', 'priogrid_id']).cumcount()
+        exploded_df['draw'] = exploded_df.groupby(['month_id', 'priogrid_gid']).cumcount()
     exploded_df.drop(columns=['ln_ged_sb_dep'], inplace=True)
     exploded_df.rename(columns={'draws':'outcome'}, inplace=True)
     exploded_df.set_index('draw', append=True, inplace=True)
@@ -131,7 +131,7 @@ def expanded_df_poisson(df, ndraws=1000,level='cm'):
     if level=='cm':
         exploded_df['draw'] = exploded_df.groupby(['month_id','country_id']).cumcount()
     if level=='pgm':
-        exploded_df['draw'] = exploded_df.groupby(['month_id','priogrid_id']).cumcount()
+        exploded_df['draw'] = exploded_df.groupby(['month_id','priogrid_gid']).cumcount()
     exploded_df.drop(columns=['prediction'],inplace=True)
     exploded_df.rename(columns={'draws':'outcome'},inplace=True)
     exploded_df.set_index('draw', append=True,inplace=True)
@@ -144,7 +144,7 @@ def expanded_df(df, function, ndraws=1000,level='cm'):
     if level=='cm':
         exploded_df['draw'] = exploded_df.groupby(['month_id','country_id']).cumcount()
     if level=='pgm':
-        exploded_df['draw'] = exploded_df.groupby(['month_id','priogrid_id']).cumcount()
+        exploded_df['draw'] = exploded_df.groupby(['month_id','priogrid_gid']).cumcount()
     try:
         exploded_df.drop(columns=['prediction'],inplace=True)
     except:
@@ -281,7 +281,7 @@ def save_actuals(level, df, filepath, year_list):
     # Dataframe with actuals
     df_actuals = pd.DataFrame(df['ln_ged_sb_dep'])
     actuals = df_actuals
-    actuals['ged_sb'] = np.expm1(actuals['ln_ged_sb_dep'])
+    actuals['outcome'] = np.expm1(actuals['ln_ged_sb_dep'])
     actuals.drop(columns=['ln_ged_sb_dep'], inplace=True)
     print(actuals.head())
     print(actuals.tail())
@@ -346,4 +346,108 @@ def boot_preddraws(actuals_pred, preds = None, n_bins = 5, n_draws = 1, lb = 0, 
     return(output)
 
 # End of file
+'''
+# New functions from Benchmark_models
 
+def reshape_df_cm(df, draw):
+    #Drops steps we will not need in the benchmark model. 
+    #Another round of drops are done below 
+    steps_to_drop = ['ln_ged_sb_dep','step_pred_25','step_pred_26','step_pred_27','step_pred_28','step_pred_29','step_pred_30',
+                     'step_pred_31','step_pred_32','step_pred_33','step_pred_34','step_pred_35','step_pred_36',]
+    df = df.drop(steps_to_drop,axis=1)
+    df.reset_index(inplace=True)
+    df['draw'] = draw
+    df_long = pd.wide_to_long(df, 'step_pred_', i = ['month_id', 'country_id'], j = 'step')
+    df_long.reset_index(inplace=True)
+    df_long.set_index(['month_id','country_id','step','draw'],inplace=True)
+    return(df_long)
+
+def make_dfcopy_cm(df_in, step, shifted_step, repetition):
+    #Makes a 'copy' of the df with a shifted step 
+#    print(step, shifted_step, repetition)
+    df = pd.DataFrame(df_in[df_in.index.get_level_values('step').isin([shifted_step])]).copy()
+    df.reset_index(inplace = True)
+    df['step'].replace(shifted_step, step, inplace = True)
+#    print(df.describe())
+    df['draw'] = (df['draw'] + len(ModelList_cm) * repetition)
+#    print(df.describe())
+    df.set_index(['month_id', 'country_id', 'step', 'draw'], inplace=True)
+    return(df)
+
+def from_ss48_to_sc12(df, level,firstmonth,years):
+    #Converts a dataframe in long format from one including all VIEWS ss predictions 
+    #   into a set of dataframes containing only sc predictions for 12 months 
+    df_list = []
+    for year in range(1,years+1):
+        this_firstmonth = firstmonth + (year-1)*12
+        print(year, this_firstmonth)
+#        this_df = df.query(f'month_id >= {this_firstmonth} and month_id <= {this_firstmonth+12-1}')
+        month_df_list = []
+        for step in range(3,14+1):
+            select_month = this_firstmonth + step - 3
+#            print('retaining month',select_month,'step',step)
+            month_df = df.query(f'month_id == {select_month} and step == {step}')
+            month_df_list.append(month_df)
+        year_df = pd.concat(month_df_list)
+        df_list.append(year_df)
+    return(df_list)
+
+def reshape_df_pgm(df, draw):
+    #Drops steps we will not need in the benchmark model. 
+    #nother round of drops are done below 
+    steps_to_drop = ['ln_ged_sb_dep','step_pred_23','step_pred_24',
+                     'step_pred_25','step_pred_26','step_pred_27','step_pred_28','step_pred_29','step_pred_30',
+                     'step_pred_31','step_pred_32','step_pred_33','step_pred_34','step_pred_35','step_pred_36',]
+    df = df.drop(steps_to_drop,axis=1)
+    df.reset_index(inplace=True)
+    df['draw'] = draw
+    df_long = pd.wide_to_long(df, 'step_pred_', i = ['month_id', 'priogrid_gid', 'draw'], j = 'step')
+    return(df_long)
+
+def retrieve_qs(qs_to_retrieve=qs,rerun=True,filename=''):
+    if rerun:
+        df = qs_to_retrieve.publish().fetch().loc[445:492]    
+        df.to_parquet(filename)
+    else:
+        df = pd.read_parquet(filename)
+    return(df)
+
+def aggregate_and_categorize(df, level):
+    #This function aggregates the input df across all draws, and returns summary statistics for the prediction model 
+    if level == 'cm':
+        index = ['month_id','country_id']
+    if level == 'pgm':
+        index = ['month_id', 'priogrid_gid']
+    if level == 'pgm2':
+        index = ['month_id', 'priogrid_gid']
+    df_to_aggregate = df.copy()
+    df_to_aggregate['log_prediction'] = np.log1p(df_to_aggregate['prediction'] )
+
+    # Proportion of draws in fatality categories
+    #for cutoffs in [0,1,10,100,1000,10000]:
+    bins = pd.IntervalIndex.from_tuples([(-1, 0), (1, 10), (11, 100), (101, 1000), (1001, 10000), (10001,100000000)])
+    df_to_aggregate['categorical'] = pd.cut(df_to_aggregate['prediction'],bins)
+    df_to_aggregate_dummies = pd.get_dummies(df_to_aggregate['categorical'],prefix='cat')
+    df_to_aggregate = pd.concat([df_to_aggregate,df_to_aggregate_dummies],axis=1)
+
+    # Mean and standard deviation of log predictions
+    df_aggregated = pd.DataFrame(df_to_aggregate['log_prediction'].groupby(level=index).mean())
+    df_aggregated.rename(columns={'log_prediction':'mean_log_prediction'},inplace=True)
+    df_aggregated['std_log_prediction'] = df_to_aggregate['log_prediction'].groupby(level=index).std()
+    for col in ('cat_(-1, 0]','cat_(1, 10]','cat_(11, 100]','cat_(101, 1000]','cat_(1001, 10000]','cat_(10001, 100000000]'):
+        df_aggregated[col] = df_to_aggregate[col].groupby(level=index).mean()
+    return(df_aggregated)
+
+def make_dfcopy_pgm(df_in, step, shifted_step, repetition):
+    #Makes a 'copy' of the df with a shifted step 
+#    print(step, shifted_step, repetition)
+    df = pd.DataFrame(df_in[df_in.index.get_level_values('step').isin([shifted_step])]).copy()
+    df.reset_index(inplace = True)
+    df['step'].replace(shifted_step, step, inplace = True)
+#    print(df.describe())
+    df['draw'] = (df['draw'] + len(ModelList_pgm) * repetition)
+#    print(df.describe())
+    df.set_index(['month_id', 'priogrid_gid', 'step', 'draw'], inplace=True)
+    return(df)
+
+'''
